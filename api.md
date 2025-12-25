@@ -1,6 +1,6 @@
 # E‑Commerce Inventory & Pricing Service – Documentation
 
-This document explains the core design of the E‑Commerce Inventory & Pricing Service built with FastAPI, PostgreSQL, Redis, Celery, and Docker.[file:200]
+This document explains the core design of the E‑Commerce Inventory & Pricing Service built with FastAPI, PostgreSQL, Redis, Celery, and Docker.
 
 ---
 
@@ -17,9 +17,9 @@ This document explains the core design of the E‑Commerce Inventory & Pricing S
     - `sku`
     - `price_adjustment`
     - `stock_quantity`
-    - `reserved_quantity`.[file:200]
+    - `reserved_quantity`.
 
-`stock_quantity` is total physical stock; `reserved_quantity` tracks units currently held in carts but not yet purchased.[file:200]
+`stock_quantity` is total physical stock; `reserved_quantity` tracks units currently held in carts but not yet purchased.
 
 ### Carts and Orders
 
@@ -27,31 +27,31 @@ This document explains the core design of the E‑Commerce Inventory & Pricing S
   - Temporary container for a user’s shopping session.
 - **CartItem**
   - Links a cart with a specific variant and quantity.
-  - Stores `reserved_until` and **price snapshots** (unit price, discount, final price).[file:200]
+  - Stores `reserved_until` and price snapshots (unit price, discount, final price).
 - **Order / OrderItem**
   - Created at checkout.
-  - Copies all price information from the cart to keep order totals stable.[file:200]
+  - Copies all price information from the cart to keep order totals stable.
 
 ### Pricing Rules
 
-Pricing rules live in dedicated tables (for example `pricing_rules` and related tables) and are applied when a cart item is created or updated.[file:200]
+Pricing rules live in dedicated tables (for example `pricing_rules` and related tables) and are applied when a cart item is created or updated.
 
 Typical rule types:
 
 - Bulk quantity discount
 - User tier discount
-- Promo code discount.[file:200]
+- Promo code discount.
 
 ---
 
 ## 2. Reservation Strategy
 
-The service uses **reserved inventory** instead of immediately decrementing stock when users add items to carts.[file:200]
+The service uses reserved inventory instead of immediately decrementing stock when users add items to carts.
 
 1. When a cart item is added:
    - Compute `available = stock_quantity - reserved_quantity`.
    - If `available` is insufficient, reject the request.
-   - Increase `reserved_quantity` and set `reserved_until` for the cart item.[file:200]
+   - Increase `reserved_quantity` and set `reserved_until` for the cart item.
 
 2. At checkout:
    - For each cart item:
@@ -60,30 +60,30 @@ The service uses **reserved inventory** instead of immediately decrementing stoc
    - On success:
      - Decrease `stock_quantity` by purchased quantity.
      - Decrease `reserved_quantity` accordingly.
-     - Create `order` and `order_items`.[file:200]
+     - Create `order` and `order_items`.
 
-This model reduces overselling risk under concurrent traffic.[file:200]
+This model reduces overselling risk under concurrent traffic.
 
 ---
 
 ## 3. Background Worker
 
-A Celery worker, using Redis as broker, runs periodic tasks to keep reservations clean.[file:200]
+A Celery worker, using Redis as broker, runs periodic tasks to keep reservations clean.
 
 Responsibilities:
 
 - Find all `cart_items` where `reserved_until` is in the past.
 - For each expired item:
   - Decrease `reserved_quantity` on the associated variant (not below zero).
-  - Remove the expired `cart_item`.[file:200]
+  - Remove the expired `cart_item`.
 
-The worker prevents “dead” carts from locking inventory indefinitely.[file:200]
+The worker prevents “dead” carts from locking inventory indefinitely.
 
 ---
 
 ## 4. Dynamic Pricing Engine
 
-The pricing service calculates final prices for cart items by combining product base price, variant adjustment, and matching rules.[file:200]
+The pricing service calculates final prices for cart items by combining product base price, variant adjustment, and matching rules.
 
 Steps:
 
@@ -94,30 +94,30 @@ Steps:
    - Quantity
    - User tier
    - Promo code
-   - Time window (if configured).[file:200]
+   - Time window (if configured).
 4. Compute discount(s) from rules.
 5. Produce:
    - `unit_price`
    - `total_price`
    - `applied_rules` list.
-6. Store these values as snapshots on `cart_items` and later copy them to `order_items`.[file:200]
+6. Store these values as snapshots on `cart_items` and later copy them to `order_items`.
 
-Snapshots guarantee that even if rules change later, existing orders retain their original prices.[file:200]
+Snapshots guarantee that even if rules change later, existing orders retain their original prices.
 
 ---
 
 ## 5. API Surfaces
 
-High‑level endpoints (see `api.md` for full request/response examples):[file:200]
+High‑level endpoints (see `api.md` for full request/response examples):
 
 - `/api/v1/products` – create and fetch products.
 - `/api/v1/variants` – create variants.
 - `/api/v1/products/{product_id}/price` – calculate price for product/variant/quantity.
 - `/api/v1/carts` – create carts.
 - `/api/v1/carts/{cart_id}/items` – add/update cart items and reserve stock.
-- `/api/v1/checkout` – finalize orders.[file:200]
+- `/api/v1/checkout` – finalize orders.
 
-All endpoints return JSON and use standard HTTP status codes for errors (`400`, `404`, `409`, `500`).[file:200]
+All endpoints return JSON and use standard HTTP status codes for errors (`400`, `404`, `409`, `500`).
 
 ---
 
@@ -125,4 +125,4 @@ All endpoints return JSON and use standard HTTP status codes for errors (`400`, 
 
 - All inventory mutations run inside database transactions.
 - Row‑level locking (for example, `SELECT ... FOR UPDATE`) is used when updating variants to avoid race conditions.
-- The combination of transactional updates, reserved quantities, and background cleanup keeps inventory consistent.[file:200]
+- The combination of transactional updates, reserved quantities, and background cleanup keeps inventory consistent.
