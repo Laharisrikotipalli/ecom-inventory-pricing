@@ -1,4 +1,4 @@
-# 🛒 E‑Commerce Inventory & Pricing API
+# E‑Commerce Inventory & Pricing API
 
 A modular **E‑Commerce Backend API** built using **FastAPI**, **PostgreSQL**, **Redis**, **Docker**, and a background **Worker** service.
 
@@ -6,7 +6,7 @@ This project implements core backend features: products and variants, cart items
 
 ---
 
-## 🚀 Features
+## Features
 
 ### 🔹 Core Features
 
@@ -25,14 +25,13 @@ This project implements core backend features: products and variants, cart items
 
 ---
 
-## 🧱 System Architecture
+##  System Architecture
 
-Client → FastAPI API → PostgreSQL  
-            ↘ Redis (queue) → Worker → PostgreSQL  
 
 <p align="center">
   <img src="schema.png" width="650" alt="Database Schema Diagram">
 </p>
+
 
 <p align="center">
   <img src="architecture1.png" width="650" alt="Architecture Diagram">
@@ -40,7 +39,7 @@ Client → FastAPI API → PostgreSQL
 
 ---
 
-## 🧩 Components
+##  Components
 
 ### API Service
 
@@ -77,7 +76,7 @@ Client → FastAPI API → PostgreSQL
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer            | Technology              |
 | ---------------- | ----------------------- |
@@ -91,7 +90,8 @@ Client → FastAPI API → PostgreSQL
 
 ---
 
-## 📁 Project Structure
+## Project Structure
+```
 ecom-api/
 ├── app/
 │ ├── main.py
@@ -115,44 +115,46 @@ ecom-api/
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
-
+```
 ---
 
----
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 Create a `.env` file (or configure environment in Docker):
+```
 DATABASE_URL=postgresql://postgres:postgres@db:5432/ecom
 REDIS_URL=redis://redis:6379/0
 SECRET_KEY=your-secret-key
-
----
+```
 
 ---
 
 ## 🐳 Running the Project (Docker)
 
-### 1️⃣ Start all services
-
+###  Start all services
+```
 docker compose up --build
-
-### 2️⃣ Apply initial schema
+```
+###  Apply initial schema
 
 This project uses a **SQL migration file**, not Alembic.
+```
 docker compose exec -T db psql -U postgres -d ecom -f /migrations/0001_init.sql
-
-### 4️⃣ Worker
+```
+###  Worker
 
 The Celery worker is started by Docker Compose.  
 If needed manually:
+```
 docker compose exec -T api celery -A app.celery_app worker -l info
-
+```
 ---
 
-## 🌐 API Access
+## API Access
 
 ### Swagger UI
+
 http://localhost:8000/docs
 
 ---
@@ -167,9 +169,10 @@ http://localhost:8000/docs
 
 ---
 
-## 🧪 API Testing (Examples)
+##  API Testing (Examples)
 
 ### 🔸 Add Item to Cart (Reserve Stock + Apply Pricing)
+```
 curl -X POST "http://127.0.0.1:8000/api/v1/carts/6/items"
 -H "Content-Type: application/json"
 -d '{
@@ -178,19 +181,20 @@ curl -X POST "http://127.0.0.1:8000/api/v1/carts/6/items"
 "user_tier": "gold",
 "promo_code": null
 }'
-
+```
 
 ### 🔸 Checkout
+```
 curl -X POST "http://127.0.0.1:8000/api/v1/checkout"
 -H "Content-Type: application/json"
 -d '{
 "cart_id": 6,
 "user_id": 1
 }'
-
+```
 ---
 
-## 🧮 Reservation Logic
+## Reservation Logic
 
 - **Stock is not immediately deducted.**
 - Each cart item has a `reserved_until` timestamp.
@@ -208,20 +212,27 @@ curl -X POST "http://127.0.0.1:8000/api/v1/checkout"
 
 ---
 
-## 🧾 Database Migrations
+## Database Migrations
 
 Currently, schema is managed with a **single SQL file**:
+```
 docker compose exec -T db psql -U postgres -d ecom -f /migrations/0001_init.sql
+```
 
-## 🧩 Local Development (Without Docker)
-
+## Local Development (Without Docker)
+```
 python -m venv venv
-source venv/bin/activate # Windows: venv\Scripts\activate
 
+source venv/bin/activate # Windows: venv\Scripts\activate
+```
+```
 pip install -r requirements.txt
+```
 
 ensure local Postgres + Redis are running and DATABASE_URL / REDIS_URL are set
+```
 uvicorn app.main:app --reload
+```
 
 
 
